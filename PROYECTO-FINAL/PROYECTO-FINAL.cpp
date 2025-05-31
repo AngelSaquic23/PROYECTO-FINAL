@@ -44,7 +44,7 @@ void menu() {
     int opcion;
     do {
         system("cls");
-        gotoxy(15, 10); cout << "__________MENU__________";
+        gotoxy(15, 10); cout << "___MENU___";
         gotoxy(15, 12); cout << "1. Ingresar";
         gotoxy(15, 13); cout << "2. Mostrar";
         gotoxy(15, 14); cout << "3. Modificar";
@@ -157,7 +157,6 @@ void crud(string tipo, int opcion) {
             break;
         }
         break;
-
     case 8:
         switch (opcion) {
         case 1: system("cls"); com->crear(); break;

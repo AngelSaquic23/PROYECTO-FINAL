@@ -1,5 +1,5 @@
 ﻿#pragma once
-
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -65,7 +65,7 @@ private:
         if (nit == "CF" || nit == "C/F") {
             nit = "C/F";
             nombreCliente = "Consumidor Final";
-            idCliente = 1; // Asegúrate de que exista un cliente con NIT "C/F" en tu tabla
+            idCliente = 1;
             return;
         }
 
@@ -82,7 +82,7 @@ private:
                 nombreCliente = string(fila[1]) + " " + string(fila[2]);
             }
             else {
-                cout << "Cliente no encontrado. Ingrese nombres: ";
+                cout << "Cliente no encontrado.\nIngrese nombres: ";
                 string nombres, apellidos;
                 cout << "Nombres: "; getline(cin, nombres);
                 cout << "Apellidos: "; getline(cin, apellidos);
@@ -114,26 +114,42 @@ private:
             cout << "\nProducto " << i + 1 << ": Ingrese ID o nombre: ";
             getline(cin, cod);
 
+            bool esNumero = all_of(cod.begin(), cod.end(), ::isdigit);
+
             cn.abrir_conexion();
             MYSQL* conectar = cn.getConectar();
             MYSQL_RES* resultado = nullptr;
             MYSQL_ROW fila;
 
-            string consulta = "SELECT idProducto, producto, marca, precio_venta FROM productos WHERE producto LIKE '%" +
-                cod + "%' OR idProducto = '" + cod + "' LIMIT 1";
+            string consulta;
+            if (esNumero) {
+                consulta =
+                    "SELECT p.idProducto, p.producto, m.marca, p.precio_venta "
+                    "FROM productos p "
+                    "INNER JOIN marcas m ON p.idMarca = m.idMarca "
+                    "WHERE p.idProducto = " + cod + " LIMIT 1";
+            }
+            else {
+                consulta =
+                    "SELECT p.idProducto, p.producto, m.marca, p.precio_venta "
+                    "FROM productos p "
+                    "INNER JOIN marcas m ON p.idMarca = m.idMarca "
+                    "WHERE p.producto LIKE '%" + cod + "%' LIMIT 1";
+            }
+
             if (mysql_query(conectar, consulta.c_str()) == 0) {
                 resultado = mysql_store_result(conectar);
                 if (resultado && (fila = mysql_fetch_row(resultado))) {
+                    int cant;
+                    cout << "Cantidad: ";
+                    cin >> cant;
+                    cin.ignore();
+
                     idProducto.push_back(strtoull(fila[0], nullptr, 10));
                     producto.push_back(fila[1]);
                     marca.push_back(fila[2]);
                     double precio = atof(fila[3]);
                     precio_venta.push_back(precio);
-
-                    int cant;
-                    cout << "Cantidad: ";
-                    cin >> cant;
-                    cin.ignore();
                     cantidad.push_back(cant);
                     subtotal.push_back(cant * precio);
                     total += cant * precio;
@@ -142,6 +158,10 @@ private:
                     cout << "Producto no encontrado.\n";
                     --i;
                 }
+            }
+            else {
+                cerr << "Error al consultar el producto.\n";
+                --i;
             }
 
             if (resultado) mysql_free_result(resultado);
@@ -165,10 +185,10 @@ private:
                 mysql_query(conectar, insert_det.c_str());
             }
 
-            cout << "\n? Venta registrada correctamente.\n";
+            cout << "\n✅ Venta registrada correctamente.\n";
         }
         else {
-            cerr << "? Error al insertar la venta.\n";
+            cerr << "❌ Error al insertar la venta.\n";
         }
 
         cn.cerrar_conexion();
@@ -196,6 +216,23 @@ private:
 
 public:
     void crear() {
+        // Limpiar datos previos
+        idVenta = 0;
+        idCliente = 0;
+        nit.clear();
+        nombreCliente.clear();
+        fecha.clear();
+        numeroFactura.clear();
+        total = 0.0;
+
+        idProducto.clear();
+        producto.clear();
+        marca.clear();
+        precio_venta.clear();
+        subtotal.clear();
+        cantidad.clear();
+
+        cin.ignore();
         buscarCliente();
         fecha = generarFechaActual();
         obtenerNumeroFactura();
@@ -240,4 +277,3 @@ public:
         cn.cerrar_conexion();
     }
 };
-1234556778990
