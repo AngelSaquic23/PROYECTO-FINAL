@@ -41,7 +41,7 @@ int main() {
 
 // Función principal del menú
 void menu() {
-    int opcion;
+    int opcion = 0;
     do {
         system("cls");
         gotoxy(15, 10); cout << "__________MENU__________";
@@ -71,7 +71,7 @@ void menu() {
 // Submenú para operaciones CRUD
 void crud(string tipo, int opcion) {
     system("cls");
-    int opcion_submenu;
+    int opcion_submenu = 0;
 
     gotoxy(20, 8); cout << tipo << " EN:";
     gotoxy(20, 10); cout << "(1) Clientes";
@@ -137,21 +137,24 @@ void crud(string tipo, int opcion) {
         break;
     case 7:
         switch (opcion) {
-        case 1: system("cls"); {
-            string nit;
-            gotoxy(20, 22); cout << "Ingrese NIT del cliente: ";
-            cin >> nit;
-            supermerc->buscarcl(nit);
+        case 1:
+            system("cls");
+            supermerc->crear();
             break;
-        }
         case 2:
-            system("cls");mostrarventa();
+            system("cls");
+            mostrarventa();
             break;
         case 3:
-            system("cls");supermerc->eliminarventa();
+            system("cls");
+            supermerc->actualizar();
+            break;
+        case 4:
+            system("cls");
             break;
         default:
             cout << "Opción no válida para ventas." << endl;
+            system("pause");
             break;
         }
         break;
@@ -175,9 +178,8 @@ void crud(string tipo, int opcion) {
 }
 
 // Función para mostrar venta por número de factura
-void mostrarventa(){
-    int f;
-    gotoxy(5, 4); cout << "Ingrese numero de factura: ";
-    cin >> f;
-    supermerc->mostrarventa(f);
+void mostrarventa() {
+    supermerc->mostrar();
+    cout << "\nPresione una tecla para continuar...";
+    system("pause>nul");
 }

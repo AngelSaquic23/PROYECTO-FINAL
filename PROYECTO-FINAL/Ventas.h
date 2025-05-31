@@ -1,423 +1,566 @@
-ï»¿
 #pragma once
 
+#include <iostream>
 #include <string>
-#include <time.h>
+#include <vector>
+#include <iomanip>
+#include <fstream>
+#include <ctime>
+#include <sstream>
+#include <mysql.h>
+#include <algorithm>
+#include <istream>
+#include <cstdint>
+#include <windows.h>
 #include "gotoxy.h"
-#include "Conexionsql.h"
+#include "conexionsql.h"
+
 using namespace std;
 
-class Ventas
-{
-protected: int idcl, idemp, idpr;
-		 string Nodefact;
-		string fechafac;
+class Ventas {
+private:
+    uint64_t idVenta = 0, idCliente = 0;
+    string nit, nombreCliente, fecha, numeroFactura = "", serie = "";
+    double total = 0.0;
+
+    vector<uint64_t> idProducto;
+    vector<string> producto, marca;
+    vector<double> precio_venta, subtotal;
+    vector<int> cantidad;
+
+    conexion cn;
+
+    string generarFechaActual() {
+        time_t now = time(0);
+        tm* ltm = localtime(&now);
+        char fecha_actual[11];
+        snprintf(fecha_actual, sizeof(fecha_actual), "%04d-%02d-%02d",
+            1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday);
+        return string(fecha_actual);
+    }
+
+    void obtenerNumeroFactura() {
+        cn.abrir_conexion();
+        MYSQL* conectar = cn.getConectar();
+        MYSQL_RES* resultado = nullptr;
+        MYSQL_ROW fila;
+
+        string consulta = "SELECT IFNULL(MAX(nofactura), 0) FROM ventas";
+        if (mysql_query(conectar, consulta.c_str()) == 0) {
+            resultado = mysql_store_result(conectar);
+            if (resultado && (fila = mysql_fetch_row(resultado))) {
+                int ultimo_num = atoi(fila[0]);
+                int nuevo_num = ultimo_num + 1;
+
+                // Generar número de factura
+                numeroFactura = to_string(nuevo_num);
+
+                // Generar serie con formato V00X
+                stringstream ss;
+                ss << "V" << setfill('0') << setw(3) << nuevo_num;
+                serie = ss.str();
+            }
+        }
+        else {
+            cerr << "Error al obtener número de factura.\n";
+        }
+
+        if (resultado) mysql_free_result(resultado);
+        cn.cerrar_conexion();
+    }
+
+    void buscarCliente() {
+        cout << "Ingrese NIT (C/F para consumidor final): ";
+        getline(cin, nit);
+        for (char& c : nit) c = toupper(c);
+
+        if (nit == "CF" || nit == "C/F") {
+            nit = "C/F";
+            nombreCliente = "Consumidor Final";
+            idCliente = 1;
+            return;
+        }
+
+        cn.abrir_conexion();
+        MYSQL* conectar = cn.getConectar();
+        MYSQL_RES* resultado = nullptr;
+        MYSQL_ROW fila;
+
+        string consulta = "SELECT idCliente, nombres, apellidos FROM clientes WHERE NIT = '" + nit + "'";
+        if (mysql_query(conectar, consulta.c_str()) == 0) {
+            resultado = mysql_store_result(conectar);
+            if (resultado && (fila = mysql_fetch_row(resultado))) {
+                idCliente = strtoull(fila[0], nullptr, 10);
+                nombreCliente = string(fila[1]) + " " + string(fila[2]);
+            }
+            else {
+                cout << "Cliente no encontrado.\nIngrese nombres: ";
+                string nombres, apellidos;
+                cout << "Nombres: "; getline(cin, nombres);
+                cout << "Apellidos: "; getline(cin, apellidos);
+
+                string insert = "INSERT INTO clientes(nombres, apellidos, NIT, fechaingreso) VALUES ('" +
+                    nombres + "', '" + apellidos + "', '" + nit + "', NOW())";
+                if (mysql_query(conectar, insert.c_str()) == 0) {
+                    idCliente = mysql_insert_id(conectar);
+                    nombreCliente = nombres + " " + apellidos;
+                }
+                else {
+                    cerr << "Error al registrar cliente.\n";
+                }
+            }
+        }
+
+        if (resultado) mysql_free_result(resultado);
+        cn.cerrar_conexion();
+    }
+
+    void ingresarProductos() {
+        int n;
+        cout << "Cantidad de productos a ingresar: ";
+        cin >> n;
+        cin.ignore();
+
+        for (int i = 0; i < n; ++i) {
+            string cod;
+            cout << "\nProducto " << i + 1 << ": Ingrese ID o nombre: ";
+            getline(cin, cod);
+
+            bool esNumero = all_of(cod.begin(), cod.end(), ::isdigit);
+
+            cn.abrir_conexion();
+            MYSQL* conectar = cn.getConectar();
+            MYSQL_RES* resultado = nullptr;
+            MYSQL_ROW fila;
+
+            string consulta;
+            if (esNumero) {
+                consulta =
+                    "SELECT p.idProducto, p.producto, m.marca, p.precio_venta "
+                    "FROM productos p "
+                    "INNER JOIN marcas m ON p.idMarca = m.idMarca "
+                    "WHERE p.idProducto = " + cod + " LIMIT 1";
+            }
+            else {
+                consulta =
+                    "SELECT p.idProducto, p.producto, m.marca, p.precio_venta "
+                    "FROM productos p "
+                    "INNER JOIN marcas m ON p.idMarca = m.idMarca "
+                    "WHERE p.producto LIKE '%" + cod + "%' LIMIT 1";
+            }
+
+            if (mysql_query(conectar, consulta.c_str()) == 0) {
+                resultado = mysql_store_result(conectar);
+                if (resultado && (fila = mysql_fetch_row(resultado))) {
+                    int cant;
+                    cout << "Cantidad: ";
+                    cin >> cant;
+                    cin.ignore();
+
+                    idProducto.push_back(strtoull(fila[0], nullptr, 10));
+                    producto.push_back(fila[1]);
+                    marca.push_back(fila[2]);
+                    double precio = atof(fila[3]);
+                    precio_venta.push_back(precio);
+                    cantidad.push_back(cant);
+                    subtotal.push_back(cant * precio);
+                    total += cant * precio;
+                }
+                else {
+                    cout << "Producto no encontrado.\n";
+                    --i;
+                }
+            }
+            else {
+                cerr << "Error al consultar el producto.\n";
+                --i;
+            }
+
+            if (resultado) mysql_free_result(resultado);
+            cn.cerrar_conexion();
+        }
+    }
+
+    void guardarVenta() {
+        cn.abrir_conexion();
+        MYSQL* conectar = cn.getConectar();
+
+        string insert_venta = "INSERT INTO ventas(nofactura, serie, fechafactura, idCliente, idEmpleado, fechaIngreso) VALUES (" +
+            numeroFactura + ", '" + serie + "', '" + fecha + "', " + to_string(idCliente) + ", 1, NOW())";
+        if (mysql_query(conectar, insert_venta.c_str()) == 0) {
+            idVenta = mysql_insert_id(conectar);
+
+            for (size_t i = 0; i < idProducto.size(); ++i) {
+                string insert_det = "INSERT INTO ventas_detalle(idVenta, idProducto, cantidad, precio_unitario) VALUES (" +
+                    to_string(idVenta) + ", " + to_string(idProducto[i]) + ", " +
+                    to_string(cantidad[i]) + ", " + to_string(precio_venta[i]) + ")";
+                mysql_query(conectar, insert_det.c_str());
+            }
+
+            cout << "\n? Venta registrada correctamente.\n";
+        }
+        else {
+            cerr << "? Error al insertar la venta.\n";
+        }
+
+        cn.cerrar_conexion();
+    }
+
+    void imprimirFacturaConsola() {
+        cout << "\n======================== FACTURA ==========================\n";
+        cout << "\n                DIGITAL SOLUTIONS S.A \n";
+        cout << "Factura No: " << numeroFactura << " - Serie: " << serie << endl;
+        cout << "Fecha: " << fecha << endl;
+        cout << "Cliente: " << nombreCliente << "       \tNIT: " << nit << endl;
+        cout << "------------------------------------------------------------\n";
+        cout << left << setw(15) << "Producto" << setw(10) << "Marca" << setw(10) << "Cant"
+            << setw(10) << "Precio" << setw(10) << "SubTotal" << endl;
+
+        for (size_t i = 0; i < producto.size(); ++i) {
+            cout << left << setw(15) << producto[i] << setw(10) << marca[i]
+                << setw(10) << cantidad[i] << setw(10) << fixed << setprecision(2)
+                << precio_venta[i] << setw(10) << subtotal[i] << endl;
+        }
+
+        cout << "------------------------------------------------------------\n";
+        cout << "                                    Total: Q." << fixed << setprecision(2) << total << endl;
+        cout << "============================================================\n";
+        cout << "          Gracias por su compra Vuelva Pronto!\n";
+    }
+
+    void generarFacturaArchivo() {
+        // Crear nombre de archivo con formato Fact0001.txt
+        stringstream nombre_archivo;
+        nombre_archivo << "C:\\Users\\asaquic\\source\\repos\\PROYECTO-FINAL\\PROYECTO-FINAL\\Facturas\\Fact"
+            << setfill('0') << setw(4) << numeroFactura << ".txt";
+
+        // Abrir archivo
+        ofstream archivo(nombre_archivo.str());
+        if (!archivo.is_open()) {
+            cerr << " No se pudo crear el archivo de factura.\n";
+            return;
+        }
+
+        archivo << "\n======================== FACTURA ==========================\n";
+        archivo << "Factura No: " << numeroFactura << " - Serie: " << serie << endl;
+        archivo << "Fecha: " << fecha << endl;
+        archivo << "Cliente: " << nombreCliente << "       \tNIT: " << nit << endl;
+        archivo << "-----------------------------------------------------------\n";
+        archivo << left << setw(15) << "Producto" << setw(10) << "Marca" << setw(10) << "Cant"
+            << setw(10) << "Precio" << setw(10) << "SubTotal" << endl;
+
+        for (size_t i = 0; i < producto.size(); ++i) {
+            archivo << left << setw(15) << producto[i] << setw(10) << marca[i]
+                << setw(10) << cantidad[i] << setw(10) << fixed << setprecision(2)
+                << precio_venta[i] << setw(10) << subtotal[i] << endl;
+        }
+
+        archivo << "------------------------------------------------------------\n";
+        archivo << "                                    Total: Q." << fixed << setprecision(2) << total << endl;
+        archivo << "============================================================\n";
+        archivo << "          Gracias por su compra Vuelva Pronto! ";
+        archivo.close();
+
+        // Abrir archivo automáticamente después de crearlo
+        system(string("start " + nombre_archivo.str()).c_str());
+    }
+
+    void imprimirFacturaDesdeBD(string noFactura) {
+        cn.abrir_conexion();
+        MYSQL* conectar = cn.getConectar();
+        MYSQL_RES* resultado = nullptr;
+        MYSQL_ROW fila;
+
+        // Datos generales
+        string consulta =
+            "SELECT v.idVenta, v.nofactura, v.serie, v.fechafactura, c.nit, "
+            "CONCAT(c.nombres, ' ', c.apellidos) AS cliente "
+            "FROM ventas v "
+            "LEFT JOIN clientes c ON v.idCliente = c.idCliente "
+            "WHERE v.nofactura = " + noFactura + " LIMIT 1";
+
+        if (mysql_query(conectar, consulta.c_str()) == 0) {
+            resultado = mysql_store_result(conectar);
+            if ((fila = mysql_fetch_row(resultado))) {
+                // Cargar datos
+                idVenta = strtoull(fila[0], nullptr, 10);
+                numeroFactura = fila[1];
+                serie = fila[2];
+                fecha = fila[3];
+                nit = fila[4] ? fila[4] : "C/F";
+                nombreCliente = fila[5] ? fila[5] : "Consumidor Final";
+            }
+            else {
+                cout << "\n? No se encontró la factura.\n";
+                cn.cerrar_conexion();
+                return;
+            }
+            mysql_free_result(resultado);
+        }
+        else {
+            cerr << "? Error al buscar datos de factura.\n";
+            cn.cerrar_conexion();
+            return;
+        }
+
+        // Detalles
+        string consulta_detalle =
+            "SELECT p.producto, m.marca, d.cantidad, d.precio_unitario "
+            "FROM ventas_detalle d "
+            "INNER JOIN productos p ON d.idProducto = p.idProducto "
+            "INNER JOIN marcas m ON p.idMarca = m.idMarca "
+            "WHERE d.idVenta = " + to_string(idVenta);
+
+        if (mysql_query(conectar, consulta_detalle.c_str()) == 0) {
+            resultado = mysql_store_result(conectar);
+
+            // Limpiar vectores
+            producto.clear();
+            marca.clear();
+            cantidad.clear();
+            precio_venta.clear();
+            subtotal.clear();
+            total = 0.0;
+
+            while ((fila = mysql_fetch_row(resultado))) {
+                producto.push_back(fila[0]);
+                marca.push_back(fila[1]);
+                cantidad.push_back(atoi(fila[2]));
+                double precio = atof(fila[3]);
+                precio_venta.push_back(precio);
+                subtotal.push_back(precio * atoi(fila[2]));
+                total += precio * atoi(fila[2]);
+            }
+            mysql_free_result(resultado);
+        }
+        else {
+            cerr << " Error al obtener detalles de la factura.\n";
+            cn.cerrar_conexion();
+            return;
+        }
+
+        cn.cerrar_conexion();
+
+        // Llama al generador de archivo
+        generarFacturaArchivo();
+    }
+
 public:
+    void crear() {
+        // Limpiar datos previos
+        idVenta = 0;
+        idCliente = 0;
+        nit.clear();
+        nombreCliente.clear();
+        fecha.clear();
+        numeroFactura.clear();
+        total = 0.0;
 
-	struct registroVentas {
-		float cantidad = 0;
-		float precio = 0;
-		float total1 = 0;
-		float totalaPagar2 = 0;
-		int nofactura = 1;
-	}factura[100];
+        idProducto.clear();
+        producto.clear();
+        marca.clear();
+        precio_venta.clear();
+        subtotal.clear();
+        cantidad.clear();
 
-	string fecha() {
-		time_t now = time(0);
-		tm time;
-		char buf[80];
-		time = *localtime(&now);
+        cin.ignore();
+        buscarCliente();
+        fecha = generarFechaActual();
+        obtenerNumeroFactura();
+        ingresarProductos();
+        guardarVenta();
+        imprimirFacturaConsola();
+        generarFacturaArchivo(); // NUEVO
 
-		strftime(buf, sizeof(buf), "%Y-%m-%d", &time);
-		return buf;
-	}
+    }
 
-	conexion cn = conexion();
-	int q_estado;
-	MYSQL_ROW fila;
-	MYSQL_RES* resultado;
-	registroVentas registro;
+    void mostrar() {
+        cn.abrir_conexion();
+        MYSQL* conectar = cn.getConectar();
+        MYSQL_RES* resultado;
+        MYSQL_ROW fila;
 
-	short z, x = 14, y = 10, f, cantcompra;
-	
-	void buscarcl(string nit) {
-		
-		char addnit;
+        string consulta =
+            "SELECT v.idVenta, v.nofactura, v.serie, v.fechafactura, c.nit, "
+            "CONCAT(c.nombres, ' ', c.apellidos) AS cliente "
+            "FROM ventas v "
+            "LEFT JOIN clientes c ON v.idCliente = c.idCliente "
+            "ORDER BY v.idVenta DESC";
 
-		cn.abrir_conexion();
+        if (!mysql_query(conectar, consulta.c_str())) {
+            resultado = mysql_store_result(conectar);
+            cout << "\n================ LISTADO DE VENTAS ================\n";
+            cout << left << setw(5) << "ID"
+                << setw(10) << "Factura"
+                << setw(8) << "Serie"
+                << setw(12) << "Fecha"
+                << setw(15) << "NIT"
+                << setw(25) << "Cliente" << endl;
+            cout << "---------------------------------------------------------------\n";
 
-		if (cn.getConectar()) {
-			string consulta = "SELECT * FROM clientes WHERE nit = '" + nit + "'";
-			const char* c = consulta.c_str();
-			q_estado = mysql_query(cn.getConectar(), c);
+            while ((fila = mysql_fetch_row(resultado))) {
+                cout << left << setw(5) << fila[0]
+                    << setw(10) << fila[1]
+                    << setw(8) << fila[2]
+                    << setw(12) << fila[3]
+                    << setw(15) << (fila[4] ? fila[4] : "C/F")
+                    << setw(25) << (fila[5] ? fila[5] : "Consumidor Final") << endl;
+            }
 
-			if (!q_estado) {
-				resultado = mysql_store_result(cn.getConectar());
-				
-				uint64_t rows = mysql_num_rows(resultado);
+            cout << "===============================================================\n";
+            mysql_free_result(resultado);
+        }
+        else {
+            cerr << "Error al ejecutar la consulta de ventas." << endl;
+        }
 
-				if (mysql_num_rows(resultado) > 0) {
-					while (fila = mysql_fetch_row(resultado)) {
-						gotoxy(25, 4);  cout << "Nombres: " << fila[1] << " " << fila[2] << endl;
-						int id = atoi(fila[0]);
-						int id_empl;
+        char opcion;
+        cout << "\nQue deseas hacer?\n";
+        cout << "1. Imprimir factura\n";
+        cout << "3. Salir al menu principal\n";
+        cout << "Elige una opción: ";
+        cin >> opcion;
+        cin.ignore();
 
-						gotoxy(65, 4); cout << "Ingrese su Id: ";
-						cin >> id_empl;
+        if (opcion == '1') {
+            string numFact;
+            cout << "Ingrese el numero de factura que desea imprimir: ";
+            getline(cin, numFact);
+            imprimirFacturaDesdeBD(numFact);
+        }
+        else {
+            cout << "\nRegresando al menu...\n";
+        }
+        cn.cerrar_conexion();
+    }
 
-						ingresarventa(id, id_empl);
-					}
-				}
-				else {
-					cout << "NIT no encotrado, agreagar? S/N: ";
-					cin >> addnit;
-					if (addnit == 'S') {
-						cout << "Agregar ";
-					}
-					else if(addnit == 'N')
-					{
-						string nit;
-						cout << "ingresar el NIT: ";
-						
-						cin >> nit;
-						buscarcl(nit);
-					}
-				}
-			}
-			else {
-				cout << "Error al consulta" << endl;
-				cout << consulta << endl << mysql_error(cn.getConectar()) << endl;
-			}
-		}
-		else {
-			cout << "Conexion error" << endl;
-		}
-	}
+    void actualizar() {
+        string nit_o_factura, opcion;
+        bool continuar = true;
 
-	void ingresarventa(int id_c, int id_e) {
-		cn.abrir_conexion();
-		if (cn.getConectar()) {
-			int nf1 = numerofact();
-			string nf = to_string(nf1 + 1);
-			string idcl1 = to_string(id_c);
-			string idem = to_string(id_e);
+        while (continuar) {
+            cout << "\nIngrese el NIT del cliente o el número de factura: ";
+            cin >> nit_o_factura;
 
-			string insertv = "INSERT INTO ventas(nofactura, serie, fechafactura, idcliente, idempleado, fechaingreso) VALUES (" + nf + ", 'A', '" + fecha() + "', " + idcl1 + ", " + idem + ", now()); ";
-			const char* i = insertv.c_str();
-			q_estado = mysql_query(cn.getConectar(), i);
+            // Buscar datos generales de la factura
+            string consulta =
+                "SELECT v.idVenta, v.nofactura, v.serie, v.fechafactura, v.idCliente, "
+                "CONCAT(c.nombres, ' ', c.apellidos) AS cliente "
+                "FROM ventas v "
+                "LEFT JOIN clientes c ON v.idCliente = c.idCliente "
+                "WHERE c.nit = '" + nit_o_factura + "' OR v.nofactura = '" + nit_o_factura + "'";
 
-			if (!q_estado) {
-				system("cls");
-				cout << "Fecha: " << fecha() << "   No.: " << nf << "   No. fac:\n";
-				cout << "NIT: " << id_c << "   Nombres: "; mostrarNombreCliente(id_c); // puedes implementar mostrarNombreCliente()
-				cout << "\nIngrese su Id: " << id_e << endl;
+            cn.abrir_conexion();
+            MYSQL* conectar = cn.getConectar();
+            MYSQL_RES* resultado;
+            MYSQL_ROW fila;
 
-				// Encabezado de tabla
-				gotoxy(5, 6); cout << "ID Producto";
-				gotoxy(20, 6); cout << "Producto";
-				gotoxy(45, 6); cout << "Cantidad";
-				gotoxy(60, 6); cout << "Precio";
+            if (!mysql_query(conectar, consulta.c_str())) {
+                resultado = mysql_store_result(conectar);
+                if ((fila = mysql_fetch_row(resultado))) {
+                    string idVenta = fila[0];
+                    string nofactura = fila[1];
+                    string idCliente = fila[4];
 
-				int y = 7;
-				char continuar;
-				do {
-					int id_producto, cantidad;
-					float precio_unitario;
-					string producto;
+                    cout << "\n? Factura encontrada:\n";
+                    cout << "Factura No.: " << fila[1] << " | Serie: " << fila[2] << " | Fecha: " << fila[3] << endl;
+                    cout << "Cliente: " << fila[5] << endl;
 
-					gotoxy(5, y);  cin >> id_producto;
-					gotoxy(20, y); cin >> producto;
-					gotoxy(45, y); cin >> cantidad;
-					gotoxy(60, y); cin >> precio_unitario;
+                    // Mostrar productos actuales
+                    string consulta_detalle =
+                        "SELECT vd.idProducto, p.producto, vd.cantidad, vd.precio_unitario "
+                        "FROM ventas_detalle vd "
+                        "JOIN productos p ON vd.idProducto = p.idProducto "
+                        "WHERE vd.idVenta = " + idVenta;
 
-					// Insertar en detalle_ventas
-					string insert_det = "INSERT INTO detalle_ventas(idventa, idproducto, cantidad, precio_unitario) VALUES (" + nf + ", " + to_string(id_producto) + ", " + to_string(cantidad) + ", " + to_string(precio_unitario) + ");";
-					q_estado = mysql_query(cn.getConectar(), insert_det.c_str());
-					if (q_estado) {
-						cout << "\nError al insertar detalle: " << mysql_error(cn.getConectar()) << endl;
-					}
+                    if (!mysql_query(conectar, consulta_detalle.c_str())) {
+                        MYSQL_RES* resultado_detalle = mysql_store_result(conectar);
+                        MYSQL_ROW fila_detalle;
 
-					y++;
-					cout << "\nÂ¿Desea ingresar otro producto? (s/n): ";
-					cin >> continuar;
-				} while (continuar == 's' || continuar == 'S');
+                        cout << "\nProductos actuales en la venta:\n";
+                        cout << left << setw(10) << "ID" << setw(25) << "Producto" << setw(10) << "Cant" << setw(15) << "Precio Unitario" << endl;
+                        cout << "---------------------------------------------------------------\n";
+                        while ((fila_detalle = mysql_fetch_row(resultado_detalle))) {
+                            cout << left << setw(10) << fila_detalle[0] << setw(25) << fila_detalle[1]
+                                << setw(10) << fila_detalle[2] << setw(15) << fila_detalle[3] << endl;
+                        }
+                        mysql_free_result(resultado_detalle);
+                    }
 
-				cout << "\nIngreso exitoso..." << endl;
-			}
-			else {
-				cout << "Error al ingresar venta" << endl;
-				cout << insertv << endl << mysql_error(cn.getConectar()) << endl;
-			}
-		}
-		else {
-			cout << "Conexion error" << endl;
-		}
-		cn.cerrar_conexion();
-	}
+                    cout << "\n¿Desea actualizar esta factura? (s/n): ";
+                    cin >> opcion;
 
-	void mostrarNombreCliente(int id_cliente) {
-		cn.abrir_conexion();
-		if (cn.getConectar()) {
-			string consulta = "SELECT nombres, apellidos FROM clientes WHERE idCliente = " + to_string(id_cliente) + ";";
-			const char* q = consulta.c_str();
-			q_estado = mysql_query(cn.getConectar(), q);
-			if (!q_estado) {
-				MYSQL_RES* resultado = mysql_store_result(cn.getConectar());
-				MYSQL_ROW fila;
-				if ((fila = mysql_fetch_row(resultado))) {
-					cout << fila[0] << " " << fila[1];  // nombres + apellidos
-				}
-				else {
-					cout << "No encontrado";
-				}
-			}
-			else {
-				cout << "Error al consultar cliente: " << mysql_error(cn.getConectar());
-			}
-		}
-		else {
-			cout << "Error de conexiÃ³n.";
-		}
-		cn.cerrar_conexion();
-	}
+                    if (opcion == "s" || opcion == "S") {
+                        // Borrar detalles anteriores
+                        string borrar_detalles = "DELETE FROM ventas_detalle WHERE idVenta = " + idVenta;
+                        mysql_query(conectar, borrar_detalles.c_str());
 
-	void facturar() {
-		x = 14;
-		y = 10;
+                        char agregar = 's';
+                        while (agregar == 's' || agregar == 'S') {
+                            string idProducto;
+                            int cantidad = -1;
+                            double precio = 0.0;
 
-		float acumulador = 0;
-		int prod, cant = 0, nofactura = 1;
-		char SN;
-		string str, prodto, canti;
+                            cout << "\nIngrese ID del producto: ";
+                            cin >> idProducto;
 
-		gotoxy(10, 8); cout << "ID Producto ";
-		gotoxy(27, 8); cout << "Producto ";
-		gotoxy(57, 8); cout << "Cantidad ";
-		gotoxy(72, 8); cout << "Precio ";
+                            while (cantidad < 0) {
+                                cout << "Cantidad (0 para omitir): ";
+                                cin >> cantidad;
+                            }
 
-		cn.abrir_conexion();
+                            if (cantidad == 0) {
+                                cout << "? Producto omitido.\n";
+                            }
+                            else {
+                                // Obtener precio
+                                string consulta_precio = "SELECT precio_venta FROM productos WHERE idProducto = " + idProducto;
+                                if (!mysql_query(conectar, consulta_precio.c_str())) {
+                                    MYSQL_RES* r = mysql_store_result(conectar);
+                                    MYSQL_ROW f = mysql_fetch_row(r);
+                                    if (f) {
+                                        precio = atof(f[0]);
+                                    }
+                                    mysql_free_result(r);
+                                }
 
-		do {
-			gotoxy(x+1, y-1);
-			cin >> prod;
-			prodto = to_string(prod);
-			cin.ignore();
-			getline(cin, prodto);
+                                // Insertar nuevo detalle
+                                string insertar = "INSERT INTO ventas_detalle (idVenta, idProducto, cantidad, precio_unitario) VALUES (" +
+                                    idVenta + ", " + idProducto + ", " + to_string(cantidad) + ", " + to_string(precio) + ")";
+                                mysql_query(conectar, insertar.c_str());
+                            }
 
-			str = "SELECT * FROM productos WHERE idProducto = " + prodto; cout << endl;
-			
-		if (cn.getConectar()) {
-		const char* c = str.c_str();
-		q_estado = mysql_query(cn.getConectar(), c);
-		if (!q_estado) {
-		resultado = mysql_store_result(cn.getConectar());
-		uint64_t rows = mysql_num_rows(resultado);
-		if (mysql_num_rows(resultado) > 0) {
-		while (fila = mysql_fetch_row(resultado)) {registro.precio = stof(fila[6]);string price = to_string(registro.precio);
-		gotoxy(x + 15, y);
-		cout << fila[3] << endl;
-		gotoxy(x + 47, y);
-		cin >> registro.cantidad;
-		canti = to_string(registro.cantidad);
-		cin.ignore();
-		gotoxy(x + 60, y);
-		factura[f].total1 = registro.cantidad * registro.precio;
-	printf("%.2f", factura[f].total1);
-		acumulador += factura[f].total1;
-		fflush(stdin);
-		gotoxy(x, y+10);
-		string str = "INSERT INTO ventas_detalle(idventa, idProducto, cantidad, precio_unitario) VALUES((SELECT MAX(idVenta) FROM ventas), " + prodto + ", " + canti + ", " + price +");";
-		const char* i = str.c_str();
-		q_estado = mysql_query(cn.getConectar(), i);
-		if (!q_estado) {					}
-		else {
-		cout << "Error al ingresar venta Mdetalle, verificar datos" << endl;
-	cout << str << endl << mysql_error(cn.getConectar()) << endl;
-	cn.cerrar_conexion();
-			}
-	}
-	}
-	}
-	}
-	else {
-	cout << "Conexion error" << endl;
-	cn.cerrar_conexion();
-			}
-			gotoxy(50, 6);
-			fflush(stdin);
-			factura[f].totalaPagar2 = acumulador;
-			gotoxy(55, 8);
-			printf("Total: %.2f", acumulador);
-			gotoxy(55, 9);
-			cout << "desea agregar? (S/N): ";
-			gotoxy(60, 10);
-			cin >> SN;
-			f++;
-			y += 2;
-		} while (SN == 'S' || SN == 's');
-		cn.cerrar_conexion();
-	}
+                            cout << "¿Desea agregar otro producto? (s/n): ";
+                            cin >> agregar;
+                        }
 
-	int numerofact() {
-		int fact = 0;
-		cn.abrir_conexion();
-		if (cn.getConectar()) {
-			string consulta = "SELECT MAX(nofactura) FROM ventas;";
-			const char* c = consulta.c_str();
-			q_estado = mysql_query(cn.getConectar(), c);
+                        cout << "\n? Factura actualizada con éxito.\n";
+                        cout << " Generando nueva factura...\n";
+                        imprimirFacturaDesdeBD(nofactura); // Aquí se usa tu función actual
+                    }
+                    else {
+                        cout << "?? Actualización cancelada.\n";
+                    }
 
-			if (!q_estado) {
-				resultado = mysql_store_result(cn.getConectar());
+                    cout << "\n¿Desea actualizar otra factura? (s/n): ";
+                    cin >> opcion;
+                    if (opcion == "n" || opcion == "N") continuar = false;
+                }
+                else {
+                    cout << "? No se encontró la factura.\n";
+                    cout << "¿Desea intentar con otra? (s/n): ";
+                    cin >> opcion;
+                    if (opcion == "n" || opcion == "N") continuar = false;
+                }
 
-				uint64_t rows = mysql_num_rows(resultado);
+                mysql_free_result(resultado);
+            }
+            else {
+                cerr << "? Error al ejecutar la consulta.\n";
+                continuar = false;
+            }
 
-				if (mysql_num_rows(resultado) > 0) {
-					while (fila = mysql_fetch_row(resultado)) {
-						fact = atoi(fila[0]);
-						gotoxy(25, 3); cout << "No.: " << fact + 1;
-					}
-				}
-				else {
-					cout << "NIT no se encuentra , desea agregar S/N: ";
-				}
-			}
-			else {
-				cout << "Error" << endl;
-				cout << consulta << endl << mysql_error(cn.getConectar()) << endl;
-			}
-		}
-		else {
-			cout << "Conexion error" << endl;
-		}
-		return fact;
-	}
-
-	void mostrarventa(int nofact) {
-
-		int prod;
-		string prodto, canti;
-
-		cn.abrir_conexion();
-
-		if (cn.getConectar()) {
-			string f = to_string(nofact);
-			string strv = "SELECT idventa, nofactura, serie, fechafactura, c.nit, c.nombres, c.apellidos FROM ventas v INNER JOIN clientes c ON v.idcliente = c.idCliente WHERE nofactura = " + f;
-
-			const char* c = strv.c_str();
-			q_estado = mysql_query(cn.getConectar(), c);
-
-			if (!q_estado) {
-				resultado = mysql_store_result(cn.getConectar());
-				while (fila = mysql_fetch_row(resultado)) {
-
-					system("cls");
-					gotoxy(5, 3);
-					cout << "Fecha: "<< fila[3];
-					gotoxy(25, 3);
-					cout << "Factura No: " << fila[2];
-					gotoxy(5, 4);
-					cout << "NIT: " << fila[4];
-					gotoxy(25, 7);  cout << "Nombre: " << fila[5] << " " << fila[6] << endl;
-
-					gotoxy(10, 8); cout << "Id Producto ";
-					gotoxy(27, 8); cout << "Producto ";
-					gotoxy(57, 8); cout << "Cantidad ";
-					gotoxy(72, 8); cout << "Precio ";
-
-					string idventa = to_string(atoi(fila[0]));
-
-					string strvd = "SELECT vd.idProducto, p.descripcion, vd.cantidad, (vd.cantidad * vd.precio_unitario) AS Precio FROM ventas_detalle vd INNER JOIN productos p ON vd.idProducto = p.idProducto WHERE idventa = " + idventa;
-
-					const char* cc = strvd.c_str();
-					q_estado = mysql_query(cn.getConectar(), cc);
-
-					if (!q_estado) {
-						resultado = mysql_store_result(cn.getConectar());
-
-						if (mysql_num_rows(resultado) > 0) {
-							y = 10;
-							x = 15;
-							while (fila = mysql_fetch_row(resultado)) {
-								
-								gotoxy(x, y++); cout << fila[0];
-								gotoxy(x + 15, y-1); cout << fila[1];
-								gotoxy(x + 47, y - 1); cout << atoi(fila[2]);
-								gotoxy(x + 60, y - 1); cout << stof(fila[3]);
-							}
-
-							char SN;
-							gotoxy(38, 20);
-							cout << "Desea modificar productos? (s/n): ";
-							cin >> SN;
-
-							if (SN == 'S' || SN == 's') {
-								facturar();
-								gotoxy(x, 9);
-								cin >> prod;
-								prodto = to_string(prod);
-								cin.ignore();
-								gotoxy(x + 15, 9);
-								cout << fila[3] << endl;
-								gotoxy(x + 47, 9);
-								cin >> registro.cantidad;
-								canti = to_string(registro.cantidad);
-								cin.ignore();
-								
-							}
-						}
-					}
-					else {
-						cout << "Error" << endl;
-						cout << strvd << endl << mysql_error(cn.getConectar()) << endl;
-					}
-				}
-			}
-			else {
-				cout << "Error al consultar" << endl;
-			}
-		}
-		else {
-			cout << "Conexion error" << endl;
-		}
-		cn.cerrar_conexion();
-
-	}
-
-	void eliminarventa() {
-		int fact;
-		cout << "Ingrese la factura a eliminar: ";
-		cin >> fact;
-		cn.abrir_conexion();
-		if (cn.getConectar()) {
-
-			string f = to_string(fact);
-			string eliminard = "DELETE FROM ventas_detalle WHERE idventa = (SELECT idventa FROM ventas WHERE nofactura = '" + f + "');";
-			string eliminarv = "DELETE FROM ventas WHERE nofactura = '" + f + "';";
-
-			const char* i = eliminard.c_str();
-			q_estado = mysql_query(cn.getConectar(), i);
-
-			if (!q_estado) {
-				cout << "Factura eliminada" << endl;
-			}
-			else {
-				cout << "No se puede eliminar" << endl;
-				cout << eliminard << endl << mysql_error(cn.getConectar()) << endl;
-			}
-
-			const char* ii = eliminarv.c_str();
-			q_estado = mysql_query(cn.getConectar(), ii);
-
-			if (!q_estado) {
-				cout << "Factura eliminada" << endl;
-				return;
-			}
-			else {
-				cout << "No se puede eliminar" << endl;
-				cout << eliminarv << endl << mysql_error(cn.getConectar()) << endl;
-			}
-		}
-		
-
-	}
+            cn.cerrar_conexion();
+        }
+    }
 };
