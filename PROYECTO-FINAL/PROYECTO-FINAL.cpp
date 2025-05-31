@@ -89,78 +89,81 @@ void crud(string tipo, int opcion) {
     switch (opcion_submenu) {
     case 1:
         switch (opcion) {
-        case 1: system("cls");clie->crear(); break;
-        case 2: system("cls");clie->leer(); break;
-        case 3: system("cls");clie->actualizar(); break;
-        case 4: system("cls");clie->eliminar(); break;
+        case 1: system("cls"); clie->crear(); break;
+        case 2: system("cls"); clie->leer(); break;
+        case 3: system("cls"); clie->actualizar(); break;
+        case 4: system("cls"); clie->eliminar(); break;
         }
         break;
     case 2:
         switch (opcion) {
-        case 1: system("cls");emp->crear(); break;
-        case 2: system("cls");emp->leer(); break;
-        case 3: system("cls");emp->actualizar(); break;
-        case 4: system("cls");emp->eliminar(); break;
+        case 1: system("cls"); emp->crear(); break;
+        case 2: system("cls"); emp->leer(); break;
+        case 3: system("cls"); emp->actualizar(); break;
+        case 4: system("cls"); emp->eliminar(); break;
         }
         break;
     case 3:
         switch (opcion) {
-        case 1: system("cls");pue->crear(); break;
-        case 2: system("cls");pue->leer(); break;
-        case 3: system("cls");pue->actualizar(); break;
-        case 4: system("cls");pue->eliminar(); break;
+        case 1: system("cls"); pue->crear(); break;
+        case 2: system("cls"); pue->leer(); break;
+        case 3: system("cls"); pue->actualizar(); break;
+        case 4: system("cls"); pue->eliminar(); break;
         }
         break;
     case 4:
         switch (opcion) {
-        case 1: system("cls");prod->crear(); break;
-        case 2: system("cls");prod->leer(); break;
-        case 3: system("cls");prod->actualizar(); break;
-        case 4: system("cls");prod->eliminar(); break;
+        case 1: system("cls"); prod->crear(); break;
+        case 2: system("cls"); prod->leer(); break;
+        case 3: system("cls"); prod->actualizar(); break;
+        case 4: system("cls"); prod->eliminar(); break;
         }
         break;
     case 5:
         switch (opcion) {
-        case 1: system("cls");marc->crear(); break;
-        case 2: system("cls");marc->leer(); break;
-        case 3: system("cls");marc->actualizar(); break;
-        case 4: system("cls");marc->eliminar(); break;
+        case 1: system("cls"); marc->crear(); break;
+        case 2: system("cls"); marc->leer(); break;
+        case 3: system("cls"); marc->actualizar(); break;
+        case 4: system("cls"); marc->eliminar(); break;
         }
         break;
     case 6:
         switch (opcion) {
-        case 1: system("cls");prov->crear(); break;
-        case 2: system("cls");prov->leer(); break;
-        case 3: system("cls");prov->actualizar(); break;
-        case 4: system("cls");prov->eliminar(); break;
+        case 1: system("cls"); prov->crear(); break;
+        case 2: system("cls"); prov->leer(); break;
+        case 3: system("cls"); prov->actualizar(); break;
+        case 4: system("cls"); prov->eliminar(); break;
         }
         break;
     case 7:
         switch (opcion) {
-        case 1: system("cls"); {
-            string nit;
-            gotoxy(20, 22); cout << "Ingrese NIT del cliente: ";
-            cin >> nit;
-            supermerc->buscarcl(nit);
+        case 1:
+            system("cls");
+            supermerc->crear();
             break;
-        }
         case 2:
-            system("cls");mostrarventa();
+            system("cls");
+            mostrarventa();
             break;
         case 3:
-            system("cls");supermerc->eliminarventa();
+            system("cls");
+            break;
+        case 4:
+            system("cls");
             break;
         default:
             cout << "Opción no válida para ventas." << endl;
+            system("pause");
             break;
         }
         break;
+
     case 8:
         switch (opcion) {
-        case 1: system("cls");com->crear(); break;
-        case 2: system("cls");com->leer(); break;
-        case 3: system("cls");com->actualizar(); break;
-        case 4: system("cls");com->eliminar(); break;
+        case 1: system("cls"); com->crear(); break;
+        case 2: system("cls"); com->leer(); break;
+        case 3: system("cls"); com->actualizar(); break;
+        case 4: system("cls"); com->eliminar(); break;
         }
         break;
     case 9:
@@ -175,9 +178,8 @@ void crud(string tipo, int opcion) {
 }
 
 // Función para mostrar venta por número de factura
-void mostrarventa(){
-    int f;
-    gotoxy(5, 4); cout << "Ingrese numero de factura: ";
-    cin >> f;
-    supermerc->mostrarventa(f);
+void mostrarventa() {
+    supermerc->mostrar();
+    cout << "\nPresione una tecla para continuar...";
+    system("pause>nul");
 }
