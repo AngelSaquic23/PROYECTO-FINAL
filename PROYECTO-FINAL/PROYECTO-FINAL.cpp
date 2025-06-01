@@ -60,7 +60,7 @@ void menu() {
         case 4: crud("ELIMINAR", 4); break;
         case 5: exit(0);
         default:
-            cout << "Opción inválida..." << endl;
+            cout << "Opcion inválida..." << endl;
             system("pause");
             break;
         }
