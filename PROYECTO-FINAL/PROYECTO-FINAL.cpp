@@ -151,10 +151,8 @@ void crud(string tipo, int opcion) {
             break;
         case 4:
             system("cls");
-<<<<<<< HEAD
             supermerc->eliminar();
-=======
->>>>>>> 15d49c06b2d0a9c2ebe3f6d4b565159d26f9ae82
+
             break;
         default:
             cout << "Opción no válida para ventas." << endl;
