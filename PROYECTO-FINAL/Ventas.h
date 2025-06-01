@@ -52,7 +52,7 @@ private:
                 int ultimo_num = atoi(fila[0]);
                 int nuevo_num = ultimo_num + 1;
 
-                // Generar n�mero de factura
+                // Generar número de factura
                 numeroFactura = to_string(nuevo_num);
 
                 // Generar serie con formato V00X
@@ -62,7 +62,7 @@ private:
             }
         }
         else {
-            cerr << "Error al obtener n�mero de factura.\n";
+            cerr << "Error al obtener número de factura.\n";
         }
 
         if (resultado) mysql_free_result(resultado);
@@ -261,7 +261,7 @@ private:
         archivo << "          Gracias por su compra Vuelva Pronto! ";
         archivo.close();
 
-        // Abrir archivo autom�ticamente despu�s de crearlo
+        // Abrir archivo automáticamente después de crearlo
         system(string("start " + nombre_archivo.str()).c_str());
     }
 
@@ -291,7 +291,7 @@ private:
                 nombreCliente = fila[5] ? fila[5] : "Consumidor Final";
             }
             else {
-                cout << "\n? No se encontr� la factura.\n";
+                cout << "\n? No se encontró la factura.\n";
                 cn.cerrar_conexion();
                 return;
             }
@@ -418,7 +418,7 @@ public:
         cout << "\nQue deseas hacer?\n";
         cout << "1. Imprimir factura\n";
         cout << "3. Salir al menu principal\n";
-        cout << "Elige una opci�n: ";
+        cout << "Elige una opción: ";
         cin >> opcion;
         cin.ignore();
 
@@ -439,7 +439,7 @@ public:
         bool continuar = true;
 
         while (continuar) {
-            cout << "\nIngrese el NIT del cliente o el n�mero de factura: ";
+            cout << "\nIngrese el NIT del cliente o el número de factura: ";
             cin >> nit_o_factura;
 
             // Buscar datos generales de la factura
@@ -487,7 +487,7 @@ public:
                         mysql_free_result(resultado_detalle);
                     }
 
-                    cout << "\n�Desea actualizar esta factura? (s/n): ";
+                    cout << "\n¿Desea actualizar esta factura? (s/n): ";
                     cin >> opcion;
 
                     if (opcion == "s" || opcion == "S") {
@@ -530,25 +530,25 @@ public:
                                 mysql_query(conectar, insertar.c_str());
                             }
 
-                            cout << "�Desea agregar otro producto? (s/n): ";
+                            cout << "¿Desea agregar otro producto? (s/n): ";
                             cin >> agregar;
                         }
 
-                        cout << "\n? Factura actualizada con �xito.\n";
+                        cout << "\n? Factura actualizada con éxito.\n";
                         cout << " Generando nueva factura...\n";
-                        imprimirFacturaDesdeBD(nofactura); // Aqu� se usa tu funci�n actual
+                        imprimirFacturaDesdeBD(nofactura); // Aquí se usa tu función actual
                     }
                     else {
-                        cout << "?? Actualizaci�n cancelada.\n";
+                        cout << "?? Actualización cancelada.\n";
                     }
 
-                    cout << "\n�Desea actualizar otra factura? (s/n): ";
+                    cout << "\n¿Desea actualizar otra factura? (s/n): ";
                     cin >> opcion;
                     if (opcion == "n" || opcion == "N") continuar = false;
                 }
                 else {
-                    cout << "? No se encontr� la factura.\n";
-                    cout << "�Desea intentar con otra? (s/n): ";
+                    cout << "? No se encontró la factura.\n";
+                    cout << "¿Desea intentar con otra? (s/n): ";
                     cin >> opcion;
                     if (opcion == "n" || opcion == "N") continuar = false;
                 }
@@ -557,6 +557,96 @@ public:
             }
             else {
                 cerr << "? Error al ejecutar la consulta.\n";
+                continuar = false;
+            }
+
+            cn.cerrar_conexion();
+        }
+    }
+    void eliminar() {
+        string nit_o_factura, opcion;
+        bool continuar = true;
+
+        while (continuar) {
+            cout << "\nIngrese el NIT del cliente o el numero de factura: ";
+            cin >> nit_o_factura;
+
+            string consulta =
+                "SELECT v.idVenta, v.nofactura, v.serie, v.fechafactura, v.idCliente, "
+                "CONCAT(c.nombres, ' ', c.apellidos) AS cliente "
+                "FROM ventas v "
+                "LEFT JOIN clientes c ON v.idCliente = c.idCliente "
+                "WHERE c.nit = '" + nit_o_factura + "' OR v.nofactura = '" + nit_o_factura + "'";
+
+            cn.abrir_conexion();
+            MYSQL* conectar = cn.getConectar();
+            MYSQL_RES* resultado;
+            MYSQL_ROW fila;
+
+            if (!mysql_query(conectar, consulta.c_str())) {
+                resultado = mysql_store_result(conectar);
+                if ((fila = mysql_fetch_row(resultado))) {
+                    string idVenta = fila[0];
+                    string nofactura = fila[1];
+
+                    cout << "\nFactura encontrada:\n";
+                    cout << "Factura No.: " << fila[1] << " | Serie: " << fila[2] << " | Fecha: " << fila[3] << endl;
+                    cout << "Cliente: " << fila[5] << endl;
+
+                    string consulta_detalle =
+                        "SELECT vd.idProducto, p.producto, vd.cantidad, vd.precio_unitario "
+                        "FROM ventas_detalle vd "
+                        "JOIN productos p ON vd.idProducto = p.idProducto "
+                        "WHERE vd.idVenta = " + idVenta;
+
+                    if (!mysql_query(conectar, consulta_detalle.c_str())) {
+                        MYSQL_RES* resultado_detalle = mysql_store_result(conectar);
+                        MYSQL_ROW fila_detalle;
+
+                        cout << "\nProductos actuales en la venta:\n";
+                        cout << left << setw(10) << "ID" << setw(25) << "Producto" << setw(10) << "Cant" << setw(15) << "Precio Unitario" << endl;
+                        cout << "---------------------------------------------------------------\n";
+                        while ((fila_detalle = mysql_fetch_row(resultado_detalle))) {
+                            cout << left << setw(10) << fila_detalle[0] << setw(25) << fila_detalle[1]
+                                << setw(10) << fila_detalle[2] << setw(15) << fila_detalle[3] << endl;
+                        }
+                        mysql_free_result(resultado_detalle);
+                    }
+
+                    cout << "\nÂ¿Desea eliminar esta factura? (s/n): ";
+                    cin >> opcion;
+
+                    if (opcion == "s" || opcion == "S") {
+                        string borrar_detalles = "DELETE FROM ventas_detalle WHERE idVenta = " + idVenta;
+                        string borrar_factura = "DELETE FROM ventas WHERE idVenta = " + idVenta;
+
+                        if (mysql_query(conectar, borrar_detalles.c_str()) == 0 &&
+                            mysql_query(conectar, borrar_factura.c_str()) == 0) {
+                            cout << "\nâœ… Factura eliminada correctamente.\n";
+                        }
+                        else {
+                            cerr << "\nâŒ Error al eliminar la factura.\n";
+                        }
+                    }
+                    else {
+                        cout << "â• Eliminacion cancelada.\n";
+                    }
+
+                    cout << "\nÂ¿Desea eliminar otra factura? (s/n): ";
+                    cin >> opcion;
+                    if (opcion == "n" || opcion == "N") continuar = false;
+                }
+                else {
+                    cout << "âŒ No se encontro la factura.\n";
+                    cout << "Â¿Desea intentar con otra? (s/n): ";
+                    cin >> opcion;
+                    if (opcion == "n" || opcion == "N") continuar = false;
+                }
+
+                mysql_free_result(resultado);
+            }
+            else {
+                cerr << "âŒ Error al ejecutar la consulta.\n";
                 continuar = false;
             }
 
