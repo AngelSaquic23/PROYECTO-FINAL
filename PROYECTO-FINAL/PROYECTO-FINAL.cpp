@@ -6,7 +6,7 @@
 #include <time.h>
 #include <mysql.h>
 
-// Inclusión de clases del sistema
+// InclusiÃ³n de clases del sistema
 #include "Proveedores.h"
 #include "Productos.h"
 #include "Clientes.h"
@@ -39,7 +39,7 @@ int main() {
     return 0;
 }
 
-// Función principal del menú
+// FunciÃ³n principal del menÃº
 void menu() {
     int opcion = 0;
     do {
@@ -50,7 +50,7 @@ void menu() {
         gotoxy(15, 14); cout << "3. Modificar";
         gotoxy(15, 15); cout << "4. Eliminar";
         gotoxy(15, 16); cout << "5. Salir";
-        gotoxy(15, 18); cout << "Ingrese opción: ";
+        gotoxy(15, 18); cout << "Ingrese opciÃ³n: ";
         gotoxy(32, 18); cin >> opcion;
 
         switch (opcion) {
@@ -60,7 +60,7 @@ void menu() {
         case 4: crud("ELIMINAR", 4); break;
         case 5: exit(0);
         default:
-            cout << "Opción inválida..." << endl;
+            cout << "OpciÃ³n invÃ¡lida..." << endl;
             system("pause");
             break;
         }
@@ -68,7 +68,7 @@ void menu() {
 }
 
 
-// Submenú para operaciones CRUD
+// SubmenÃº para operaciones CRUD
 void crud(string tipo, int opcion) {
     system("cls");
     int opcion_submenu = 0;
@@ -83,7 +83,7 @@ void crud(string tipo, int opcion) {
     gotoxy(20, 16); cout << "(7) Ventas";
     gotoxy(20, 17); cout << "(8) Compras";
     gotoxy(20, 18); cout << "(9) Regresar al menu";
-    gotoxy(20, 20); cout << "Ingrese opción: ";
+    gotoxy(20, 20); cout << "Ingrese opciÃ³n: ";
     gotoxy(38, 20); cin >> opcion_submenu;
 
     switch (opcion_submenu) {
@@ -151,13 +151,18 @@ void crud(string tipo, int opcion) {
             break;
         case 4:
             system("cls");
+<<<<<<< HEAD
+            supermerc->eliminar();
+=======
+>>>>>>> 15d49c06b2d0a9c2ebe3f6d4b565159d26f9ae82
             break;
         default:
-            cout << "Opción no válida para ventas." << endl;
+            cout << "OpciÃ³n no vÃ¡lida para ventas." << endl;
             system("pause");
             break;
         }
         break;
+
     case 8:
         switch (opcion) {
         case 1: system("cls");com->crear(); break;
@@ -169,15 +174,15 @@ void crud(string tipo, int opcion) {
     case 9:
         return;
     default:
-        cout << "Opción inválida..." << endl;
+        cout << "OpciÃ³n invÃ¡lida..." << endl;
         break;
     }
 
     system("pause");
-    menu();  // Vuelve al menú principal después de ejecutar
+    menu();  // Vuelve al menÃº principal despuÃ©s de ejecutar
 }
 
-// Función para mostrar venta por número de factura
+// FunciÃ³n para mostrar venta por nÃºmero de factura
 void mostrarventa() {
     supermerc->mostrar();
     cout << "\nPresione una tecla para continuar...";
