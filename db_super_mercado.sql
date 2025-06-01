@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
 --
--- Host: localhost    Database: db_super_mercado
+-- Host: 127.0.0.1    Database: db_super_mercado
 -- ------------------------------------------------------
 -- Server version	8.0.42
 
@@ -32,7 +32,7 @@ CREATE TABLE `clientes` (
   `correo_electronico` varchar(45) DEFAULT NULL,
   `fechaingreso` datetime DEFAULT NULL,
   PRIMARY KEY (`idCliente`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -41,7 +41,7 @@ CREATE TABLE `clientes` (
 
 LOCK TABLES `clientes` WRITE;
 /*!40000 ALTER TABLE `clientes` DISABLE KEYS */;
-INSERT INTO `clientes` VALUES (2,'B','C','2',_binary '\0','1231','ASA@GMIAL.COM','2025-05-28 16:23:39'),(3,'C','D','2313541',_binary '\0','1231','ARW@GMAIL.COM','2025-05-28 16:26:08'),(4,'E','F','1224',_binary '\0','14234','WQ@GMAIL.COM','2025-05-28 16:27:59'),(5,'ASA','DSA','12534',_binary '','12341','A@GMAIL.COM','2024-01-01 00:00:00'),(6,'JOSUE DAVID','Gomez bolallo','545364',_binary '','21332','asa@gmail.com','2025-05-28 00:00:00');
+INSERT INTO `clientes` VALUES (2,'B','C','2',_binary '\0','1231','ASA@GMIAL.COM','2025-05-28 16:23:39'),(3,'C','D','2313541',_binary '\0','1231','ARW@GMAIL.COM','2025-05-28 16:26:08'),(4,'E','F','1224',_binary '\0','14234','WQ@GMAIL.COM','2025-05-28 16:27:59'),(5,'ASA','DSA','12534',_binary '','12341','A@GMAIL.COM','2024-01-01 00:00:00'),(6,'JOSUE DAVID','Gomez bolallo','545364',_binary '','21332','asa@gmail.com','2025-05-28 00:00:00'),(7,'A','S','',NULL,NULL,NULL,'2025-05-31 12:45:31');
 /*!40000 ALTER TABLE `clientes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -278,7 +278,7 @@ DROP TABLE IF EXISTS `ventas`;
 CREATE TABLE `ventas` (
   `idVenta` int NOT NULL AUTO_INCREMENT,
   `nofactura` int DEFAULT NULL,
-  `serie` char(1) DEFAULT NULL,
+  `serie` char(100) DEFAULT NULL,
   `fechafactura` date DEFAULT NULL,
   `idCliente` int DEFAULT NULL,
   `idEmpleado` int DEFAULT NULL,
@@ -288,7 +288,7 @@ CREATE TABLE `ventas` (
   KEY `idEmpleado` (`idEmpleado`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`idCliente`) REFERENCES `clientes` (`idCliente`),
   CONSTRAINT `ventas_ibfk_2` FOREIGN KEY (`idEmpleado`) REFERENCES `empleados` (`idEmpleado`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -297,7 +297,7 @@ CREATE TABLE `ventas` (
 
 LOCK TABLES `ventas` WRITE;
 /*!40000 ALTER TABLE `ventas` DISABLE KEYS */;
-INSERT INTO `ventas` VALUES (2,1,'A','2025-05-29',4,1,'2025-05-29 14:17:15'),(4,2,'A','2025-05-29',4,1,'2025-05-29 15:16:39'),(5,3,'A','2025-05-29',4,1,'2025-05-29 15:38:20'),(6,4,'A','2025-05-29',4,1,'2025-05-29 15:45:14'),(7,5,'A','2025-05-29',4,1,'2025-05-29 16:12:25');
+INSERT INTO `ventas` VALUES (2,1,'A','2025-05-29',4,1,'2025-05-29 14:17:15'),(4,2,'A','2025-05-29',4,1,'2025-05-29 15:16:39'),(5,3,'A','2025-05-29',4,1,'2025-05-29 15:38:20'),(6,4,'A','2025-05-29',4,1,'2025-05-29 15:45:14'),(7,5,'A','2025-05-29',4,1,'2025-05-29 16:12:25'),(8,6,'A','2025-05-31',4,1,'2025-05-31 01:19:52'),(9,7,'A','2025-05-31',4,1,'2025-05-31 01:23:56'),(11,8,'A','2025-05-31',4,1,'2025-05-31 01:57:40'),(12,9,'A','2025-05-31',7,1,'2025-05-31 12:45:36'),(13,10,'A','2025-05-31',2,1,'2025-05-31 13:17:52'),(14,11,'A','2025-05-31',4,1,'2025-05-31 13:18:56'),(15,12,'A','2025-05-31',2,1,'2025-05-31 13:19:34'),(16,13,'A','2025-05-31',2,1,'2025-05-31 13:44:33'),(17,14,'A','2025-05-31',2,1,'2025-05-31 13:45:12'),(19,15,'A','2025-05-31',2,1,'2025-05-31 13:47:43'),(20,16,'A','2025-05-31',2,1,'2025-05-31 14:02:43'),(21,17,'A','2025-05-31',2,1,'2025-05-31 16:22:54'),(22,18,'A','2025-05-31',2,1,'2025-05-31 16:43:08'),(23,19,'A','2025-05-31',2,1,'2025-05-31 16:45:05'),(24,20,'A','2025-05-31',2,1,'2025-05-31 17:05:06'),(25,21,'A','2025-05-31',2,1,'2025-05-31 17:06:03'),(27,22,'V022','2025-05-31',2,1,'2025-05-31 17:50:55'),(28,23,'V023','2025-05-31',2,1,'2025-05-31 17:51:42');
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -319,7 +319,7 @@ CREATE TABLE `ventas_detalle` (
   KEY `idProducto` (`idProducto`),
   CONSTRAINT `ventas_detalle_ibfk_1` FOREIGN KEY (`idVenta`) REFERENCES `ventas` (`idVenta`),
   CONSTRAINT `ventas_detalle_ibfk_2` FOREIGN KEY (`idProducto`) REFERENCES `productos` (`idProducto`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -328,6 +328,7 @@ CREATE TABLE `ventas_detalle` (
 
 LOCK TABLES `ventas_detalle` WRITE;
 /*!40000 ALTER TABLE `ventas_detalle` DISABLE KEYS */;
+INSERT INTO `ventas_detalle` VALUES (1,13,1,1,1400.95),(2,14,1,1,1400.95),(3,14,1,1,1400.95),(4,14,1,1,1400.95),(5,15,1,1,1400.95),(6,15,1,1,1400.95),(7,15,1,1,1400.95),(8,15,1,1,1400.95),(9,16,1,2,1400.95),(10,17,1,2,1400.95),(11,17,1,1,1400.95),(12,17,1,2,1400.95),(13,19,1,2,1400.95),(14,19,1,1,1400.95),(15,19,1,2,1400.95),(16,20,1,2,1400.95),(17,20,1,1,1400.95),(18,21,1,1,1400.95),(19,22,1,4,1400.95),(20,22,1,20,1400.95),(21,22,1,83,1400.95),(22,22,1,1,1400.95),(23,22,1,26,1400.95),(24,22,1,3,1400.95),(25,23,1,10,1400.95),(26,24,1,10,1400.95),(27,25,1,1,1400.95),(29,28,1,1,1400.95),(31,27,1,2,1400.95);
 /*!40000 ALTER TABLE `ventas_detalle` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -348,4 +349,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-30 23:31:56
+-- Dump completed on 2025-05-31 19:17:49
