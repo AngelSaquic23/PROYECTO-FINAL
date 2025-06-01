@@ -172,7 +172,7 @@ void crud(string tipo, int opcion) {
     case 9:
         return;
     default:
-        cout << "Opción inválida..." << endl;
+        cout << "Opción invalida..." << endl;
         break;
     }
 
